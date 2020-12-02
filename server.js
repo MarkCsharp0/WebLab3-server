@@ -8,7 +8,6 @@ const app = express();
 const apiKey = "fa80dfd43dd64fe4ef5aaa1ab1bce741";
 const apiLink = 'https://api.openweathermap.org/data/2.5/weather?units=metric&lang=ru&';
 const clientLink = "http://localhost:63342";
-const defaultCityID = 498817;
 
 const Datastore = require('nedb');
 const database = new Datastore({ filename: '.data/database', autoload: true });
@@ -27,6 +26,11 @@ const cookieOptions = {
 const responseFailed = {
     success: false,
     payload: "Не получилось получить информацию с сервера"
+};
+
+const cityNotFound = {
+    success: false,
+    payload: "Информация о введенном городе не найдена"
 };
 
 app.use(express.json());
@@ -62,11 +66,6 @@ app.get('/weather/city', cors(corsOptions), async (request, response) => {
 app.get('/weather/coordinates', cors(corsOptions), async (request, response) => {
     const weatherResponse = await getWeatherByCoords(request.query.lat, request.query.lon);
 
-    response.json(weatherResponse);
-});
-
-app.get('/weather/default', cors(corsOptions), async (request, response) => {
-    const weatherResponse = await getWeatherByID(defaultCityID);
     response.json(weatherResponse);
 });
 
@@ -118,7 +117,6 @@ app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
                         response.json({ success: false, payload: error });
                     } 
                     else {
-                        //console.log(request.session);
                         response.cookie('userKey', userKey, cookieOptions);
                         response.json(weatherResponse);
                     }
@@ -127,7 +125,7 @@ app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
         })
     }
     else {
-        response.json(responseFailed);
+        response.status(404).json(cityNotFound);
     }
 });
 
