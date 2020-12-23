@@ -1,16 +1,15 @@
-const express = require('express');
-const fetch = require('node-fetch');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const session = require('express-session');
-const app = express();
-
-const apiKey = "fa80dfd43dd64fe4ef5aaa1ab1bce741";
-const apiLink = 'https://api.openweathermap.org/data/2.5/weather?units=metric&lang=ru&';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import session from 'express-session';
+import {fetchFunctions} from './fetchFunctions.js';
+export const app = express();
+const f = new fetchFunctions();
 const clientLink = "http://localhost:63342";
 
-const Datastore = require('nedb');
-const database = new Datastore({ filename: '.data/database', autoload: true });
+import Db from './db.js';
+import Datastore from 'nedb';
+Db.prototype.database = new Datastore({ filename: 'db/weather', autoload: true });
 
 const corsOptions = {
     origin: clientLink,
@@ -21,11 +20,6 @@ const corsOptions = {
 
 const cookieOptions = {
     maxAge: 1000 * 60 * 60 * 24 * 30,
-};
-
-const responseFailed = {
-    success: false,
-    payload: "Не получилось получить информацию с сервера"
 };
 
 const cityNotFound = {
@@ -55,56 +49,80 @@ const sess = {
 };
 app.use(cookieParser());
 app.use(session(sess));
-app.listen(3000);
 
 app.get('/weather/city', cors(corsOptions), async (request, response) => {
-    const weatherResponse = await getWeatherByName(request.query.q);
-    
-    response.json(weatherResponse);
+    const cityName = request.query.q;
+    console.log(cityName);
+    if (cityName == null) {
+        response.status(500).json({
+            success: false,
+            payload: "Не получилось получить информацию с сервера"
+        });
+    } else {
+        const weatherResponse = await f.getWeatherByName(cityName);
+        response.json(weatherResponse);
+    }
 });
 
 app.get('/weather/coordinates', cors(corsOptions), async (request, response) => {
-    const weatherResponse = await getWeatherByCoords(request.query.lat, request.query.lon);
+    console.log("Coordinates");
+    const weatherResponse = await f.getWeatherByCoords(request.query.lat, request.query.lon);
 
     response.json(weatherResponse);
 });
 
 app.get('/weather/:id', cors(corsOptions), async (request, response) => {
-    const weatherResponse = await getWeatherByID(request.params.id);
-
-    response.json(weatherResponse);
+    console.log("Weather Id");
+    const weatherResponse = await f.getWeatherByID(request.params.id);
+    console.log(weatherResponse);
+    if (weatherResponse.payload === 'city not found') {
+        response.status(404).json(weatherResponse);
+    } else {
+        response.status(200).json(weatherResponse);
+    }
 });
 
 app.get('/favourites', cors(corsOptions), (request, response) => {
     let userKey = request.cookies.userKey;
+    //console.log(request.cookies);
     if(typeof(userKey) == 'undefined') {
         userKey = request.session.id;
     }
-    console.log(request.cookies);
-    database.find({ userToken: userKey }, function(error, docs) {
+    console.log(userKey);
+    Db.prototype.database.find({ userToken: userKey }, function(error, docs) {
         if (error != null) {
-            response.json({ success: false, payload: error });
+            response.status(500).json({ success: false, payload: error });
         }
         else if (docs.length === 0) {
-            response.json({ success: true, payload: []});
+            response.status(404).json({ success: true, payload: []});
         }
         else {
             response.cookie('userKey', userKey, cookieOptions);
-            response.json({ success: true, payload: docs[0].cities });
+            console.log(docs[0].cities);
+            response.status(200).json({ success: true, payload: docs[0].cities });
         }
     })
 });
 
 app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
-    const weatherResponse = await getWeatherByName(request.params.city);
-    console.log(weatherResponse);
+    let cityName = request.params.city;
+    console.log(cityName);
+    if (cityName == null) {
+        response.status(500).json({
+            success: false,
+            payload: "Не получилось получить информацию с сервера"
+        });
+        return;
+    }
+    const weatherResponse = await f.getWeatherByName(cityName);
     let userKey = request.cookies.userKey;
     if(typeof(userKey) == 'undefined') {
         userKey = request.session.id;
     }
+    //console.log(db.database.getAllData());
 
-    if(weatherResponse.success) {   
-        database.find({ userToken: userKey, cities: { $elemMatch: weatherResponse.payload.id } }, function(error, docs) {
+    if(weatherResponse.success) {
+        Db.prototype.database.find({ userToken: userKey, cities: { $elemMatch: weatherResponse.payload.id } }, function(error, docs) {
             if (error != null) {
                 response.json({ success: false, payload: error });
             }
@@ -112,7 +130,7 @@ app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
                 response.cookie('userKey', userKey, cookieOptions).json({ success: true, duplicate: true })
             } 
             else {
-                database.update({ userToken: userKey }, { $addToSet: { cities: weatherResponse.payload.id } }, { upsert: true }, function() {
+                Db.prototype.database.update({ userToken: userKey }, { $addToSet: { cities: weatherResponse.payload.id } }, { upsert: true }, function() {
                     if (error != null) {
                         response.json({ success: false, payload: error });
                     } 
@@ -131,28 +149,30 @@ app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
 
 app.delete('/favourites/:id', cors(corsOptions), (request, response) => {
     const id = Number(request.params.id);
-
+    console.log(Db.prototype.database.filename);
     let userKey = request.cookies.userKey;
     if(typeof(userKey) == 'undefined') {
         userKey = request.session.id;
     }
-    console.log(request.session);
-
+   console.log(userKey);
+    console.log(id);
+    console.log(Db.prototype.database.getAllData());
     if(!Number.isInteger(id)) {
-        response.json({ success: false, payload: 'Incorrect query' });
+        response.status(500).json({ success: false, payload: 'Incorrect query' });
     }
     else {
-        database.find({ userToken: userKey, cities: { $elemMatch : id } }, function(error, docs) {
+        Db.prototype.database.find({ userToken: userKey, cities: { $elemMatch : id } }, function(error, docs) {
             if(error != null) {
-                response.json({ success: false, payload: error });
+                response.status(500).json({ success: false, payload: error });
             }
             else if(docs.length === 0) {
-                response.json({ success: false, payload: 'City id is not in the list' });
+                console.log('Not found');
+                response.status(404).json({ success: false, payload: 'City id is not in the list' });
             }
             else {
-                database.update({ userToken: userKey }, { $pull: { cities: id} }, function(error) {
+                Db.prototype.database.update({ userToken: userKey }, { $pull: { cities: id} }, function(error) {
                     if(error != null) {
-                        response.json({ success: false, payload: error });
+                        response.status(500).json({ success: false, payload: error });
                     } 
                     else {
                         response.cookie('userKey', userKey, cookieOptions);
@@ -163,36 +183,3 @@ app.delete('/favourites/:id', cors(corsOptions), (request, response) => {
         }) 
     }
 });
-
-async function getWeather(url) {
-    try {
-        const response = await fetch(url);
-        try {
-            const data = await response.json();
-            if(data.cod >= 300)
-                return { success: false, payload: data.message };
-            return { success: true, payload: data }
-        }
-        catch (error) {
-            return responseFailed;
-        }
-    }
-    catch (error) {
-        return { success: false, payload: error }
-    }
-}
-
-function getWeatherByName(cityName) {
-    const requestURL = apiLink + 'q=' + encodeURI(cityName) + '&appid=' + apiKey;
-    return getWeather(requestURL);
-}
-
-function getWeatherByID(cityID) {
-    const requestURL = apiLink + 'id=' + encodeURI(cityID) + '&appid=' + apiKey;
-    return getWeather(requestURL);
-}
-
-function getWeatherByCoords(latitude, longitude) {
-    const requestURL = apiLink + 'lat=' + encodeURI(latitude) + '&lon=' + encodeURI(longitude) + '&appid=' + apiKey;
-    return getWeather(requestURL);
-}
