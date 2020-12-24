@@ -20,8 +20,6 @@ export class App {
 
 async addCity(event) {
     event.preventDefault();
-    console.log(event.target);
-    console.log(event.target.input);
     let input = event.target.input;
     let cityName = input.value;
     input.value = '';
@@ -57,16 +55,13 @@ async addCity(event) {
     }
 
 async loadHere() {
-        //console.log("Start update");
     let loader = util.getHereLoader();
     document.querySelector('.here').innerHTML = "";
     document.querySelector('.here').append(loader);
-    //console.log(navigator.geolocation);
     try {
         const coords = await App.prototype.getCurrentLocation();
         await App.prototype.loadHereByCoords(coords);
     } catch(e) {
-        console.log(e);
         return App.prototype.loadHereDefault();
     }
 }
@@ -77,15 +72,11 @@ insertHereError(error) {
     }
 
 async loadHereByCoords(coords) {
-    //this.createCityCardHere(null);
-   // console.log(position.coords.latitude);
-    //console.log(position.coords.longitude);
     let error = document.getElementById('error_here').content.cloneNode(true);
     let weather;
     let weatherRequest;
     try {
         weatherRequest = await api.getWeatherByCoords(coords.latitude, coords.longitude);
-        //console.log(weatherRequest);
         if (!weatherRequest.success) {
             this.insertHereError(error);
         } else {
@@ -99,7 +90,6 @@ async loadHereByCoords(coords) {
 
 
 async loadHereDefault() {
-       // this.createCityCardHere(null);
     let error = document.getElementById('error_here').content.cloneNode(true);
     let weather;
     let weatherRequest;

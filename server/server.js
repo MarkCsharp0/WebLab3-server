@@ -52,7 +52,6 @@ app.use(session(sess));
 
 app.get('/weather/city', cors(corsOptions), async (request, response) => {
     const cityName = request.query.q;
-    console.log(cityName);
     if (cityName == null) {
         response.status(500).json({
             success: false,
@@ -65,16 +64,13 @@ app.get('/weather/city', cors(corsOptions), async (request, response) => {
 });
 
 app.get('/weather/coordinates', cors(corsOptions), async (request, response) => {
-    console.log("Coordinates");
     const weatherResponse = await f.getWeatherByCoords(request.query.lat, request.query.lon);
 
     response.json(weatherResponse);
 });
 
 app.get('/weather/:id', cors(corsOptions), async (request, response) => {
-    console.log("Weather Id");
     const weatherResponse = await f.getWeatherByID(request.params.id);
-    console.log(weatherResponse);
     if (weatherResponse.payload === 'city not found') {
         response.status(404).json(weatherResponse);
     } else {
@@ -84,11 +80,9 @@ app.get('/weather/:id', cors(corsOptions), async (request, response) => {
 
 app.get('/favourites', cors(corsOptions), (request, response) => {
     let userKey = request.cookies.userKey;
-    //console.log(request.cookies);
     if(typeof(userKey) == 'undefined') {
         userKey = request.session.id;
     }
-    console.log(userKey);
     Db.prototype.database.find({ userToken: userKey }, function(error, docs) {
         if (error != null) {
             response.status(500).json({ success: false, payload: error });
@@ -106,7 +100,6 @@ app.get('/favourites', cors(corsOptions), (request, response) => {
 
 app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
     let cityName = request.params.city;
-    console.log(cityName);
     if (cityName == null) {
         response.status(500).json({
             success: false,
@@ -149,14 +142,10 @@ app.post('/favourites/:city', cors(corsOptions), async (request, response) => {
 
 app.delete('/favourites/:id', cors(corsOptions), (request, response) => {
     const id = Number(request.params.id);
-    console.log(Db.prototype.database.filename);
     let userKey = request.cookies.userKey;
     if(typeof(userKey) == 'undefined') {
         userKey = request.session.id;
     }
-   console.log(userKey);
-    console.log(id);
-    console.log(Db.prototype.database.getAllData());
     if(!Number.isInteger(id)) {
         response.status(500).json({ success: false, payload: 'Incorrect query' });
     }

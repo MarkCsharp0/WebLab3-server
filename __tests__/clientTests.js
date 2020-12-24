@@ -189,7 +189,6 @@ test('test getFavoriteWeatherList function', async () => {
     });
     Api.prototype.getWeather = mockGetWeather;
     const ans = await api.getFavoriteWeatherList();
-   //console.log(ans);
     expect(ans).toStrictEqual({success: true, payload: [498817]});
     expect(mockGetWeather.mock.calls[0][0]).toBe('http://localhost:3000/favourites');
     expect(mockGetWeather.mock.calls.length).toBe(1);
@@ -206,8 +205,6 @@ test('test getWeather function', async () => {
     fetch.mockResponseOnce(JSON.stringify(fakeObject));
     const api = new Api();
     const ans = await api.getWeather('http://localhost:3000/weather/' + encodeURI(testId.toString()), 'GET');
-    //expect(ans.payload).toStrictEqual(fakeObject);
-    //console.log((await ans));
     expect(ans).toStrictEqual(fakeObject);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/weather/' + encodeURI(testId.toString()), { method: 'GET', credentials: 'include'});
@@ -388,7 +385,6 @@ test('test createCityCardHere function', () => {
 
 test('test createCityCardFavorite function', () => {
     const ans = util.createCityCardFavorite(fakeObject);
-    //console.log(ans.querySelector("div").outerHTML);
     expect(ans.querySelector("div").outerHTML).toBe("<div class=\"favorite__city-header\">\n" +
         "                <h3>Санкт-Петербург</h3>\n" +
         "                <span class=\"temperature\">-0.23°C</span>\n" +
@@ -398,7 +394,6 @@ test('test createCityCardFavorite function', () => {
 });
 
 test('test start function', async () => {
-    //const ans = util.createCityCardFavorite(fakeObject);
     let mockLoadHere = jest.fn((message) => {
         return null;
     });

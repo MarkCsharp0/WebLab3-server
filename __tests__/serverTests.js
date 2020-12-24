@@ -106,7 +106,6 @@ test('test getWeather function for Spb', async () => {
 
 test('test delete a favourite city not from the database', async () => {
     const response = await request.delete(`/favourites/${testId}`);
-    //console.log(response);
     expect(response.status).toBe(404);
     expect(response.body.success).toBe(false);
     expect(response.body.payload).toBe('City id is not in the list');
@@ -149,7 +148,6 @@ test('test post favorites endpoint with unknownCity', async () => {
 test('test getWeather function with uncorrect url', async () => {
     fetch.mockAbort();
     const ans = await f.getWeather(badUrl);
-    console.log(ans);
     expect(ans.success).toBe(false);
 });
 
@@ -166,7 +164,6 @@ test('test get favorites for new user', async () => {
 
 test('test get favorites for old user', async () => {
     const response = await request.get("/favourites").set('Cookie', ['userKey=1']);
-    //console.log(response.body);
     expect(response.status).toBe(200);
     expect(response.body.payload).toStrictEqual([498817]);
 });
@@ -211,7 +208,6 @@ test('test get weather endpoint by unknown id', async () => {
 test('test getWeatherByName function', () => {
     fetchFunctions.prototype.getWeather = mockGetWeather;
     const ans = f.getWeatherByName(testName);
-    console.log(ans);
     expect(ans).toStrictEqual({success: true, payload: fakeObject});
     expect(mockGetWeather.mock.calls[0][0]).toBe(url);
 });
@@ -219,7 +215,6 @@ test('test getWeatherByName function', () => {
 test('test getWeatherByID function', () => {
     fetchFunctions.prototype.getWeather = mockGetWeather;
     const ans = f.getWeatherByID(testId);
-    // console.log(ans);
     expect(ans).toStrictEqual({success: true, payload: fakeObject});
     expect(mockGetWeather.mock.calls[0][0]).toBe('https://api.openweathermap.org/data/2.5/weather?units=metric&lang=ru&id=498817&appid=fa80dfd43dd64fe4ef5aaa1ab1bce741');
 });
